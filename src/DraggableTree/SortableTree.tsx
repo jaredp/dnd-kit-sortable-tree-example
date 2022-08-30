@@ -130,6 +130,12 @@ export function SortableTree({
       activeId ? [activeId, ...collapsedItems] : collapsedItems
     );
   }, [activeId, items]);
+
+
+  function getLabelStringFromItem(item: FlattenedItem): string {
+    return item.id.toString();
+  }
+
   const projected =
     activeId && overId
       ? getProjection(
@@ -154,9 +160,10 @@ export function SortableTree({
     })
   );
 
-  const sortedIds = useMemo(() => flattenedItems.map(({id}) => id), [
-    flattenedItems,
-  ]);
+  const sortedIds = useMemo(
+    () => flattenedItems.map(({id}) => id),
+    [flattenedItems],
+  );
   const activeItem = activeId
     ? flattenedItems.find(({id}) => id === activeId)
     : null;
@@ -170,7 +177,9 @@ export function SortableTree({
 
   const announcements: Announcements = {
     onDragStart({active}) {
-      return `Picked up ${active.id}.`;
+      const activeItem = flattenedItems.find(({id}) => id === active.id);
+      if (!activeItem) return;
+      return `Picked up ${getLabelStringFromItem(activeItem)}.`;
     },
     onDragMove({active, over}) {
       return getMovementAnnouncement('onDragMove', active.id, over?.id);
@@ -182,7 +191,9 @@ export function SortableTree({
       return getMovementAnnouncement('onDragEnd', active.id, over?.id);
     },
     onDragCancel({active}) {
-      return `Moving was cancelled. ${active.id} was dropped in its original position.`;
+      const activeItem = flattenedItems.find(({id}) => id === active.id);
+      if (!activeItem) return;
+      return `Moving was cancelled. ${getLabelStringFromItem(activeItem)} was dropped in its original position.`;
     },
   };
 
@@ -309,62 +320,65 @@ export function SortableTree({
   }
 
   function getMovementAnnouncement(
-    eventName: string,
+    eventName: 'onDragEnd' | 'onDragMove' | 'onDragOver',
     activeId: UniqueIdentifier,
     overId?: UniqueIdentifier
   ) {
-    if (overId && projected) {
-      if (eventName !== 'onDragEnd') {
-        if (
-          currentPosition &&
-          projected.parentId === currentPosition.parentId &&
-          overId === currentPosition.overId
-        ) {
-          return;
-        } else {
-          setCurrentPosition({
-            parentId: projected.parentId,
-            overId,
-          });
-        }
-      }
-
-      const clonedItems: FlattenedItem[] = JSON.parse(
-        JSON.stringify(flattenTree(items))
-      );
-      const overIndex = clonedItems.findIndex(({id}) => id === overId);
-      const activeIndex = clonedItems.findIndex(({id}) => id === activeId);
-      const sortedItems = arrayMove(clonedItems, activeIndex, overIndex);
-
-      const previousItem = sortedItems[overIndex - 1];
-
-      let announcement;
-      const movedVerb = eventName === 'onDragEnd' ? 'dropped' : 'moved';
-      const nestedVerb = eventName === 'onDragEnd' ? 'dropped' : 'nested';
-
-      if (!previousItem) {
-        const nextItem = sortedItems[overIndex + 1];
-        announcement = `${activeId} was ${movedVerb} before ${nextItem.id}.`;
-      } else {
-        if (projected.depth > previousItem.depth) {
-          announcement = `${activeId} was ${nestedVerb} under ${previousItem.id}.`;
-        } else {
-          let previousSibling: FlattenedItem | undefined = previousItem;
-          while (previousSibling && projected.depth < previousSibling.depth) {
-            const parentId: UniqueIdentifier | null = previousSibling.parentId;
-            previousSibling = sortedItems.find(({id}) => id === parentId);
-          }
-
-          if (previousSibling) {
-            announcement = `${activeId} was ${movedVerb} after ${previousSibling.id}.`;
-          }
-        }
-      }
-
-      return announcement;
+    if (!overId || !projected) {
+      return;
     }
 
-    return;
+    if (eventName !== 'onDragEnd') {
+      if (
+        currentPosition &&
+        projected.parentId === currentPosition.parentId &&
+        overId === currentPosition.overId
+      ) {
+        return;
+      } else {
+        setCurrentPosition({
+          parentId: projected.parentId,
+          overId,
+        });
+      }
+    }
+
+    // the original code cloned flattenedItems via JSON.parse(JSON.stringify(...))ing a
+    // fresh flattenTree. Afaict, clonedItems is treated immutably; arrayMove is pure
+    // makes a copy. Other uses of flattenedItems are also immutable.
+    const overIndex = flattenedItems.findIndex(({id}) => id === overId);
+    const activeIndex = flattenedItems.findIndex(({id}) => id === activeId);
+    const sortedItems = arrayMove(flattenedItems, activeIndex, overIndex);
+
+    const previousItem = sortedItems[overIndex - 1];
+    const activeItemName = getLabelStringFromItem(flattenedItems[activeIndex]);
+
+    const movedVerb = eventName === 'onDragEnd' ? 'dropped' : 'moved';
+    const nestedVerb = eventName === 'onDragEnd' ? 'dropped' : 'nested';
+
+    if (!previousItem) {
+      const nextItem = sortedItems[overIndex + 1];
+      const nextItemName = getLabelStringFromItem(nextItem);
+      return `${activeItemName} was ${movedVerb} before ${nextItemName}.`;
+
+    } else if (projected.depth > previousItem.depth) {
+        const previousItemName = getLabelStringFromItem(previousItem);
+        return `${activeItemName} was ${nestedVerb} under ${previousItemName}.`;
+
+    } else {
+      let previousSibling: FlattenedItem | undefined = previousItem;
+      while (previousSibling && projected.depth < previousSibling.depth) {
+        const parentId: UniqueIdentifier | null = previousSibling.parentId;
+        previousSibling = sortedItems.find(({id}) => id === parentId);
+      }
+
+      if (previousSibling) {
+        const previousSiblingName = getLabelStringFromItem(previousSibling);
+        return `${activeItemName} was ${movedVerb} after ${previousSiblingName}.`;
+      }
+
+      return;
+    }
   }
 }
 

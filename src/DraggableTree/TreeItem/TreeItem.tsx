@@ -12,13 +12,13 @@ import styles from './TreeItem.module.css';
 
 export interface TreeItemProps {
   id: UniqueIdentifier;
+  label: React.ReactNode;
   childCount?: number;
   clone?: boolean;
   depth: number;
   indentationWidth: number;
   indicator?: boolean;
   collapsed?: boolean;
-  label: React.ReactNode;
   onCollapse?(): void;
   onRemove?(): void;
 }
