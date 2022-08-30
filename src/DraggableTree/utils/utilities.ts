@@ -1,5 +1,6 @@
 import type {UniqueIdentifier} from '@dnd-kit/core';
 import {arrayMove} from '@dnd-kit/sortable';
+import sumBy from 'lodash/sumBy';
 
 import type {FlattenedItem, TreeItem, TreeItems} from './types';
 
@@ -176,20 +177,13 @@ export function setProperty<T extends keyof TreeItem>(
   return [...items];
 }
 
-function countChildren(items: TreeItem[], count = 0): number {
-  return items.reduce((acc, {children}) => {
-    if (children.length) {
-      return countChildren(children, acc + 1);
-    }
-
-    return acc + 1;
-  }, count);
+function getSubtreeNodeCount(item: TreeItem): number {
+  return sumBy(item.children, c => getSubtreeNodeCount(c)) + 1;
 }
 
-export function getChildCount(items: TreeItems, id: UniqueIdentifier) {
+export function getSubtreeNodeCountById(items: TreeItems, id: UniqueIdentifier) {
   const item = findItemDeep(items, id);
-
-  return item ? countChildren(item.children) : 0;
+  return item ? getSubtreeNodeCount(item) : 0;
 }
 
 export function removeChildrenOf(

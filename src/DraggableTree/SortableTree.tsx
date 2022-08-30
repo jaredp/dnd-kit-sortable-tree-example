@@ -29,7 +29,7 @@ import {
   buildTree,
   flattenTree,
   getProjection,
-  getChildCount,
+  getSubtreeNodeCountById,
   removeItem,
   removeChildrenOf,
   setProperty,
@@ -237,7 +237,7 @@ export function SortableTree({
                 id={activeId}
                 depth={activeItem.depth}
                 clone
-                childCount={getChildCount(items, activeId) + 1}
+                childCount={getSubtreeNodeCountById(items, activeId)}
                 label={activeId.toString()}
                 indentationWidth={indentationWidth}
               />
@@ -358,6 +358,7 @@ export function SortableTree({
 
     if (!previousItem) {
       const nextItem = sortedItems[overIndex + 1];
+      if (!nextItem) return;
       const nextItemName = getLabelStringFromItem(nextItem);
       return `${activeItemName} was ${movedVerb} before ${nextItemName}.`;
 
