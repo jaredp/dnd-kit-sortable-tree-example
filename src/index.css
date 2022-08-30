@@ -1,0 +1,16 @@
+
+html {
+  background-color: #FCFCFC;
+  font-family: -apple-system, BlinkMacSystemFont, San Francisco, Roboto, Segoe UI, Helvetica, Helvetica Neue, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+body {
+  padding: 0 !important;
+  margin: 0;
+  box-sizing: border-box;
+}
+main {
+  position: relative;
+  min-height: 100vh;
+  outline: none;
+}
