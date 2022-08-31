@@ -21,7 +21,6 @@ import {
 } from '@dnd-kit/core';
 import {
   SortableContext,
-  arrayMove,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 
@@ -297,45 +296,40 @@ export function SortableTree({
       }
     }
 
-    // the original code cloned flattenedItems via JSON.parse(JSON.stringify(...))ing a
-    // fresh flattenTree. Afaict, clonedItems is treated immutably; arrayMove is pure
-    // makes a copy. Other uses of flattenedItems are also immutable.
-    const overIndex = flattenedItems.findIndex(({id}) => id === overId);
-    const activeIndex = flattenedItems.findIndex(({id}) => id === activeId);
-    const sortedItems = arrayMove(flattenedItems, activeIndex, overIndex);
-
-    const previousItem = sortedItems[overIndex - 1];
-    const activeItem = flattenedItems[activeIndex];
-
+    const activeItem = flattenedItems.find(({id}) => id === activeId);
     if (!activeItem) return;
     const activeItemName = getLabelStringFromItem(activeItem);
 
+    const { destination } = projected;
     const movedVerb = eventName === 'onDragEnd' ? 'dropped' : 'moved';
     const nestedVerb = eventName === 'onDragEnd' ? 'dropped' : 'nested';
 
-    if (!previousItem) {
-      const nextItem = sortedItems[overIndex + 1];
-      if (!nextItem) return;
-      const nextItemName = getLabelStringFromItem(nextItem);
-      return `${activeItemName} was ${movedVerb} before ${nextItemName}.`;
+    if (destination.kind === 'after') {
+      const { sibling } = destination;
+      const previousSibling = flattenedItems.find(({id}) => id === sibling.id);
+      if (!previousSibling) return;
+      const previousSiblingName = getLabelStringFromItem(previousSibling);
+      return `${activeItemName} was ${movedVerb} after ${previousSiblingName}.`;
 
-    } else if (projected.depth > previousItem.depth) {
-        const previousItemName = getLabelStringFromItem(previousItem);
-        return `${activeItemName} was ${nestedVerb} under ${previousItemName}.`;
+    } else if (destination.kind === 'firstChildOf') {
+      const { parent } = destination;
+
+      if (parent === null) {
+        const firstItem = flattenedItems[0];
+        if (!firstItem) return;
+        const nextItemName = getLabelStringFromItem(firstItem);
+        return `${activeItemName} was ${movedVerb} before ${nextItemName}.`;
+      }
+
+      const parentItem = flattenedItems.find(({id}) => id === parent.id);
+      if (!parentItem) return;
+      const previousItemName = getLabelStringFromItem(parentItem);
+      return `${activeItemName} was ${nestedVerb} under ${previousItemName}.`;
 
     } else {
-      let previousSibling: FlattenedItem | undefined = previousItem;
-      while (previousSibling && projected.depth < previousSibling.depth) {
-        const parentId: UniqueIdentifier | null = previousSibling.parentId;
-        previousSibling = sortedItems.find(({id}) => id === parentId);
-      }
-
-      if (previousSibling) {
-        const previousSiblingName = getLabelStringFromItem(previousSibling);
-        return `${activeItemName} was ${movedVerb} after ${previousSiblingName}.`;
-      }
-
-      return;
+      // assert destination.kind must be one of the above with types
+      ((x: never) => {})(destination);
+      throw new Error("destination.kind must be one of the above");
     }
   }
 }
