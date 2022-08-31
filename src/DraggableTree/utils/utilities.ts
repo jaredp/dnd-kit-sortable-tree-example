@@ -1,10 +1,9 @@
 import type {UniqueIdentifier} from '@dnd-kit/core';
 import {arrayMove} from '@dnd-kit/sortable';
-import sumBy from 'lodash/sumBy';
 import clamp from 'lodash/clamp';
 import findLast from 'lodash/findLast'
 
-import type {FlattenedItem, TreeItem, TreeItems, TreePosition} from './types';
+import type {FlattenedItem, TreeItem, TreePosition} from './types';
 
 export const iOS = /iPad|iPhone|iPod/.test(navigator.platform);
 
@@ -59,53 +58,20 @@ function getMinDepth(nextItem?: FlattenedItem) {
 }
 
 function flatten(
-  items: TreeItems,
+  items: TreeItem[],
   depth = 0
 ): FlattenedItem[] {
-  return items.reduce<FlattenedItem[]>((acc, item, index) => {
+  return items.reduce<FlattenedItem[]>((acc, item) => {
     return [
       ...acc,
-      {...item, depth},
+      {...item, item, depth},
       ...flatten(item.children, depth + 1),
     ];
   }, []);
 }
 
-export function flattenTree(items: TreeItems): FlattenedItem[] {
+export function flattenTree(items: TreeItem[]): FlattenedItem[] {
   return flatten(items);
-}
-
-export function findItemDeep(
-  items: TreeItems,
-  itemId: UniqueIdentifier
-): TreeItem | undefined {
-  for (const item of items) {
-    const {id, children} = item;
-
-    if (id === itemId) {
-      return item;
-    }
-
-    if (children.length) {
-      const child = findItemDeep(children, itemId);
-
-      if (child) {
-        return child;
-      }
-    }
-  }
-
-  return undefined;
-}
-
-
-function getSubtreeNodeCount(item: TreeItem): number {
-  return sumBy(item.children, c => getSubtreeNodeCount(c)) + 1;
-}
-
-export function getSubtreeNodeCountById(items: TreeItems, id: UniqueIdentifier) {
-  const item = findItemDeep(items, id);
-  return item ? getSubtreeNodeCount(item) : 0;
 }
 
 export function removeChildrenOf(

@@ -2,10 +2,11 @@ import { UniqueIdentifier } from "@dnd-kit/core";
 import React from "react";
 
 import { SortableTree } from "./DraggableTree/SortableTree";
-import { TreeItem, TreeItems, TreePosition } from "./DraggableTree/utils/types";
+import { TreeItem, TreePosition } from "./DraggableTree/utils/types";
+import sumBy from 'lodash/sumBy';
 
 
-const initialItems: TreeItems = [
+const initialItems: TreeItem[] = [
   {
     id: 'Home',
     children: [],
@@ -48,7 +49,7 @@ export function mapForest(
   }));
 }
 
-export function removeItem(root: TreeItems, id: UniqueIdentifier): TreeItems {
+export function removeItem(root: TreeItem[], id: UniqueIdentifier): TreeItem[] {
   return mapForest(root, forest => forest.filter(t => t.id !== id));
 }
 
@@ -102,7 +103,6 @@ export function forestWithSubtreeInsertedFirstInside(
   });
 }
 
-
 export function insertSubtreeAt(forest: TreeItem[], addend: TreeItem, destination: TreePosition): TreeItem[] {
   if (destination.kind === 'after') {
     return forestWithSubtreeInsertedAfter(forest, addend, destination.sibling);
@@ -115,6 +115,11 @@ export function insertSubtreeAt(forest: TreeItem[], addend: TreeItem, destinatio
     ((x: never) => {})(destination);
     throw new Error("destination.kind must be one of the above");
   }
+}
+
+
+export function getSubtreeSize(item: TreeItem): number {
+  return sumBy(item.children, c => getSubtreeSize(c)) + 1;
 }
 
 function App() {
@@ -134,6 +139,9 @@ function App() {
           <SortableTree 
             collapsible indicator removable
             items={items}
+            getLabelStringForItem={item => item.id.toString()}
+            getLabelForItem={item => item.id}
+            getSubtreeSize={getSubtreeSize}
             handleRemove={id => setItems(items => removeItem(items, id))}
             handleCollapse={id => setItems(items => setProperty(items, id, 'collapsed', c => !c))}
             handleMove={(activeItem, destination) => {

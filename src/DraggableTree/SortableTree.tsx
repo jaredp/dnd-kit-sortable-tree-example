@@ -27,10 +27,9 @@ import {
 import {
   flattenTree,
   getProjection,
-  getSubtreeNodeCountById,
   removeChildrenOf,
 } from './utils/utilities';
-import type {FlattenedItem, SensorContext, TreeItem, TreeItems, TreePosition} from './utils/types';
+import type {SensorContext, TreeItem, TreePosition} from './utils/types';
 import {sortableTreeKeyboardCoordinates} from './utils/keyboardCoordinates';
 import {SortableTreeItem} from './TreeItem/TreeItem';
 import {CSS} from '@dnd-kit/utilities';
@@ -67,11 +66,13 @@ const dropAnimationConfig: DropAnimation = {
 
 interface Props {
   collapsible?: boolean;
-  defaultItems?: TreeItems;
   indentationWidth?: number;
   indicator?: boolean;
   removable?: boolean;
-  items: TreeItems,
+  items: TreeItem[],
+  getLabelStringForItem: (item: TreeItem) => string;
+  getLabelForItem: (item: TreeItem) => React.ReactNode;
+  getSubtreeSize: (item: TreeItem) => number | undefined;
   handleRemove: (id: UniqueIdentifier) => void;
   handleCollapse: (id: UniqueIdentifier) => void;
   handleMove: (activeItem: TreeItem, destination: TreePosition) => void;
@@ -83,6 +84,9 @@ export function SortableTree({
   indentationWidth = 50,
   removable,
   items,
+  getLabelStringForItem,
+  getLabelForItem,
+  getSubtreeSize,
   handleRemove,
   handleCollapse,
   handleMove,
@@ -106,11 +110,6 @@ export function SortableTree({
       activeId ? [activeId, ...collapsedItems] : collapsedItems
     );
   }, [activeId, items]);
-
-
-  function getLabelStringFromItem(item: FlattenedItem): string {
-    return item.id.toString();
-  }
 
   const projected =
     activeId && overId
@@ -155,7 +154,7 @@ export function SortableTree({
     onDragStart({active}) {
       const activeItem = flattenedItems.find(({id}) => id === active.id);
       if (!activeItem) return;
-      return `Picked up ${getLabelStringFromItem(activeItem)}.`;
+      return `Picked up ${getLabelStringForItem(activeItem.item)}.`;
     },
     onDragMove({active, over}) {
       return getMovementAnnouncement('onDragMove', active.id, over?.id);
@@ -169,7 +168,7 @@ export function SortableTree({
     onDragCancel({active}) {
       const activeItem = flattenedItems.find(({id}) => id === active.id);
       if (!activeItem) return;
-      return `Moving was cancelled. ${getLabelStringFromItem(activeItem)} was dropped in its original position.`;
+      return `Moving was cancelled. ${getLabelStringForItem(activeItem.item)} was dropped in its original position.`;
     },
   };
 
@@ -186,11 +185,11 @@ export function SortableTree({
       onDragCancel={handleDragCancel}
     >
       <SortableContext items={sortedIds} strategy={verticalListSortingStrategy}>
-        {flattenedItems.map(({id, children, collapsed, depth}) => (
+        {flattenedItems.map(({id, item, children, collapsed, depth}) => (
           <SortableTreeItem
             key={id}
             id={id}
-            label={id}
+            label={getLabelForItem(item)}
             depth={id === activeId && projected ? projected.depth : depth}
             indentationWidth={indentationWidth}
             indicator={indicator}
@@ -213,7 +212,7 @@ export function SortableTree({
                 id={activeId}
                 depth={activeItem.depth}
                 clone
-                childCount={getSubtreeNodeCountById(items, activeId)}
+                childCount={getSubtreeSize(activeItem.item)}
                 label={activeId.toString()}
                 indentationWidth={indentationWidth}
               />
@@ -296,7 +295,7 @@ export function SortableTree({
 
     const activeItem = flattenedItems.find(({id}) => id === activeId);
     if (!activeItem) return;
-    const activeItemName = getLabelStringFromItem(activeItem);
+    const activeItemName = getLabelStringForItem(activeItem.item);
 
     const { destination } = projected;
     const movedVerb = eventName === 'onDragEnd' ? 'dropped' : 'moved';
@@ -306,7 +305,7 @@ export function SortableTree({
       const { sibling } = destination;
       const previousSibling = flattenedItems.find(({id}) => id === sibling.id);
       if (!previousSibling) return;
-      const previousSiblingName = getLabelStringFromItem(previousSibling);
+      const previousSiblingName = getLabelStringForItem(previousSibling.item);
       return `${activeItemName} was ${movedVerb} after ${previousSiblingName}.`;
 
     } else if (destination.kind === 'firstChildOf') {
@@ -315,13 +314,13 @@ export function SortableTree({
       if (parent === null) {
         const firstItem = flattenedItems[0];
         if (!firstItem) return;
-        const nextItemName = getLabelStringFromItem(firstItem);
+        const nextItemName = getLabelStringForItem(firstItem.item);
         return `${activeItemName} was ${movedVerb} before ${nextItemName}.`;
       }
 
       const parentItem = flattenedItems.find(({id}) => id === parent.id);
       if (!parentItem) return;
-      const previousItemName = getLabelStringFromItem(parentItem);
+      const previousItemName = getLabelStringForItem(parentItem.item);
       return `${activeItemName} was ${nestedVerb} under ${previousItemName}.`;
 
     } else {
