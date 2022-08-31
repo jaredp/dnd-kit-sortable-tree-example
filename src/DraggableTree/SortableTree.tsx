@@ -29,42 +29,12 @@ import {
   flattenTree,
   getProjection,
   getSubtreeNodeCountById,
-  removeItem,
   removeChildrenOf,
-  setProperty,
-  insertSubtreeAt,
 } from './utils/utilities';
 import type {FlattenedItem, SensorContext, TreeItem, TreeItems, TreePosition} from './utils/types';
 import {sortableTreeKeyboardCoordinates} from './utils/keyboardCoordinates';
 import {SortableTreeItem} from './TreeItem/TreeItem';
 import {CSS} from '@dnd-kit/utilities';
-
-const initialItems: TreeItems = [
-  {
-    id: 'Home',
-    children: [],
-  },
-  {
-    id: 'Collections',
-    children: [
-      {id: 'Spring', children: []},
-      {id: 'Summer', children: []},
-      {id: 'Fall', children: []},
-      {id: 'Winter', children: []},
-    ],
-  },
-  {
-    id: 'About Us',
-    children: [],
-  },
-  {
-    id: 'My Account',
-    children: [
-      {id: 'Addresses', children: []},
-      {id: 'Order History', children: []},
-    ],
-  },
-];
 
 const measuring = {
   droppable: {
@@ -101,16 +71,22 @@ interface Props {
   indentationWidth?: number;
   indicator?: boolean;
   removable?: boolean;
+  items: TreeItems,
+  handleRemove: (id: UniqueIdentifier) => void;
+  handleCollapse: (id: UniqueIdentifier) => void;
+  handleMove: (activeItem: TreeItem, destination: TreePosition) => void;
 }
 
 export function SortableTree({
   collapsible,
-  defaultItems = initialItems,
   indicator = false,
   indentationWidth = 50,
   removable,
+  items,
+  handleRemove,
+  handleCollapse,
+  handleMove,
 }: Props) {
-  const [items, setItems] = useState(() => defaultItems);
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [overId, setOverId] = useState<UniqueIdentifier | null>(null);
   const [offsetLeft, setOffsetLeft] = useState(0);
@@ -295,22 +271,6 @@ export function SortableTree({
     setCurrentPosition(null);
 
     document.body.style.setProperty('cursor', '');
-  }
-
-  function handleRemove(id: UniqueIdentifier) {
-    setItems((items) => removeItem(items, id));
-  }
-
-  function handleCollapse(id: UniqueIdentifier) {
-    setItems(items => setProperty(items, id, 'collapsed', c => !c));
-  }
-
-  function handleMove(activeItem: TreeItem, destination: TreePosition) {
-    setItems(items => insertSubtreeAt(
-      removeItem(items, activeItem.id),
-      activeItem,
-      destination
-    ));
   }
 
   function getMovementAnnouncement(
