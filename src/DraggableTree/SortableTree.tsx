@@ -34,6 +34,7 @@ import type {FlattenedItem, SensorContext, TreeItem, TreeItems, TreePosition} fr
 import {sortableTreeKeyboardCoordinates} from './utils/keyboardCoordinates';
 import {SortableTreeItem} from './TreeItem/TreeItem';
 import {CSS} from '@dnd-kit/utilities';
+import isEqual from 'lodash/isEqual';
 
 const measuring = {
   droppable: {
@@ -90,8 +91,8 @@ export function SortableTree({
   const [overId, setOverId] = useState<UniqueIdentifier | null>(null);
   const [offsetLeft, setOffsetLeft] = useState(0);
   const [currentPosition, setCurrentPosition] = useState<{
-    parentId: UniqueIdentifier | null;
     overId: UniqueIdentifier;
+    depth: number;
   } | null>(null);
 
   const flattenedItems = useMemo(() => {
@@ -232,7 +233,7 @@ export function SortableTree({
 
     if (activeItem) {
       setCurrentPosition({
-        parentId: activeItem.parentId,
+        depth: activeItem.depth,
         overId: activeId,
       });
     }
@@ -282,18 +283,14 @@ export function SortableTree({
     }
 
     if (eventName !== 'onDragEnd') {
-      if (
-        currentPosition &&
-        projected.parentId === currentPosition.parentId &&
-        overId === currentPosition.overId
-      ) {
+      const memoizeKey = {
+        depth: projected.depth,
+        overId
+      };
+      if (isEqual(currentPosition, memoizeKey)) {
         return;
-      } else {
-        setCurrentPosition({
-          parentId: projected.parentId,
-          overId,
-        });
       }
+      setCurrentPosition(memoizeKey);
     }
 
     const activeItem = flattenedItems.find(({id}) => id === activeId);
