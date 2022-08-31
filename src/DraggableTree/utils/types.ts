@@ -19,3 +19,7 @@ export type SensorContext = MutableRefObject<{
   items: FlattenedItem[];
   offset: number;
 }>;
+
+export type TreePosition =
+    { kind: 'after', sibling: TreeItem } 
+  | { kind: 'firstChildOf', parent: TreeItem | null };

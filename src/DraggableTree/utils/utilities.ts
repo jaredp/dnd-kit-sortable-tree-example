@@ -1,9 +1,10 @@
 import type {UniqueIdentifier} from '@dnd-kit/core';
 import {arrayMove} from '@dnd-kit/sortable';
 import sumBy from 'lodash/sumBy';
-import { Children } from 'react';
+import clamp from 'lodash/clamp';
+import findLast from 'lodash/findLast'
 
-import type {FlattenedItem, TreeItem, TreeItems} from './types';
+import type {FlattenedItem, TreeItem, TreeItems, TreePosition} from './types';
 
 export const iOS = /iPad|iPhone|iPod/.test(navigator.platform);
 
@@ -22,24 +23,30 @@ export function getProjection(
   const activeItemIndex = items.findIndex(({id}) => id === activeId);
 
   const activeItem = items[activeItemIndex];
+
   const newItems = arrayMove(items, activeItemIndex, overItemIndex);
   const previousItem = newItems[overItemIndex - 1];
   const nextItem = newItems[overItemIndex + 1];
+
   const dragDepth = getDragDepth(dragOffset, indentationWidth);
   const projectedDepth = (activeItem?.depth ?? 0) + dragDepth;
+  
   const maxDepth = getMaxDepth(previousItem);
   const minDepth = getMinDepth(nextItem);
-  let depth = projectedDepth;
+  const depth = clamp(projectedDepth, minDepth, maxDepth);
 
-  if (projectedDepth >= maxDepth) {
-    depth = maxDepth;
-  } else if (projectedDepth < minDepth) {
-    depth = minDepth;
-  }
-
-  return {depth, maxDepth, minDepth, parentId: getParentId()};
-
-  function getParentId() {
+  // either prevSibling or parent
+  const predecessor = overItemIndex === 0 ? undefined : findLast(
+    newItems,
+    (item) => item.depth <= depth,
+    overItemIndex - 1
+  );
+  const destination: TreePosition =
+    predecessor === undefined ? { kind: 'firstChildOf', parent: null }
+    : predecessor.depth < depth ? { kind: 'firstChildOf', parent: predecessor }
+    : { kind: 'after', sibling: predecessor };
+  
+  const parentId = (() => {
     if (depth === 0 || !previousItem) {
       return null;
     }
@@ -58,11 +65,13 @@ export function getProjection(
       .find((item) => item.depth === depth)?.parentId;
 
     return newParent ?? null;
-  }
+  })();
+
+  return { depth, maxDepth, minDepth, destination, parentId };
 }
 
 function getMaxDepth(previousItem?: FlattenedItem) {
-  return previousItem !== undefined ? previousItem.depth + 1 : 0;
+  return previousItem === undefined ? 0 : previousItem.depth + 1;
 }
 
 function getMinDepth(nextItem?: FlattenedItem) {
@@ -85,27 +94,6 @@ function flatten(
 
 export function flattenTree(items: TreeItems): FlattenedItem[] {
   return flatten(items);
-}
-
-export function buildTree(flattenedItems: FlattenedItem[]): TreeItems {
-  const root: TreeItem = {id: 'root', children: []};
-  const nodes: Record<string, TreeItem> = {[root.id]: root};
-  const items = flattenedItems.map((item) => ({...item, children: []}));
-
-  for (const item of items) {
-    const {id, children} = item;
-    const parentId = item.parentId ?? root.id;
-    const parent = nodes[parentId] ?? findItem(items, parentId);
-
-    nodes[id] = {id, children};
-    parent?.children.push(item);
-  }
-
-  return root.children;
-}
-
-export function findItem(items: TreeItem[], itemId: UniqueIdentifier) {
-  return items.find(({id}) => id === itemId);
 }
 
 export function findItemDeep(
@@ -131,20 +119,88 @@ export function findItemDeep(
   return undefined;
 }
 
-export function removeItem(items: TreeItems, id: UniqueIdentifier): TreeItems {
-  return items
-    .filter(item => item.id !== id)
-    .map(item => ({...item, children: removeItem(item.children, id)}));
+// This is gross for a few reasons, not the least of which:
+// 1. having no mechanism to short-circuit if the edit has finished with the subtree it cares about
+// 2. makes a full copy of subtrees that had/needed no edits
+// 3. is recursive instead of using an explicit stack, so it can stackoverflow
+// 4. preorder traversal instead of postorder traversal, for no particular reason
+export function mapForest(
+  forest: TreeItem[],
+  fn: (node: TreeItem[], parent: TreeItem | null) => TreeItem[],
+  parent: TreeItem | null = null
+): TreeItem[] {
+  return fn(forest, parent).flatMap(tree => ({
+    ...tree, children: mapForest(tree.children, fn, tree)
+  }));
 }
 
-export function setProperty(
+export function removeItem(root: TreeItems, id: UniqueIdentifier): TreeItems {
+  return mapForest(root, forest => forest.filter(t => t.id !== id));
+}
+
+export function mapForestByTree(
+  forest: TreeItem[],
+  fn: (node: TreeItem) => TreeItem
+): TreeItem[] {
+  return mapForest(forest, child => child.map(fn));
+}
+
+export function setProperty<T extends keyof TreeItem>(
   items: TreeItem[],
   id: UniqueIdentifier,
-  setter: (value: TreeItem) => TreeItem
+  property: T,
+  fn: (value: TreeItem[T]) => TreeItem[T]
 ): TreeItem[] {
-  return items.map(item =>
-    item.id === id ? setter(item) : {...item, children: setProperty(item.children, id, setter)}
+  return mapForestByTree(items, node => 
+    node.id === id ? {...node, [property]: fn(node[property]) } 
+    : node
   );
+}
+
+export function forestWithSubtreeInsertedAfter(
+  root: TreeItem[],
+  addend: TreeItem,
+  sibling: TreeItem
+): TreeItem[] {
+  return mapForest(root, children => {
+    const sibIndex = children.findIndex(({id}) => id === sibling.id);
+    if (sibIndex === -1) {
+      // not in this subtree, act as identity function
+      return children;
+    }
+
+    const newChildren = children.slice();
+    newChildren.splice(sibIndex + 1, 0, addend);
+    return newChildren;
+  });
+}
+
+export function forestWithSubtreeInsertedFirstInside(
+  forest: TreeItem[],
+  addend: TreeItem,
+  parent: TreeItem | null
+): TreeItem[] {
+  return mapForest(forest, (children, node) => {
+    if (node?.id === parent?.id) {
+      return [addend, ...children];
+    }
+    return children;
+  });
+}
+
+
+export function insertSubtreeAt(forest: TreeItem[], addend: TreeItem, destination: TreePosition): TreeItem[] {
+  if (destination.kind === 'after') {
+    return forestWithSubtreeInsertedAfter(forest, addend, destination.sibling);
+
+  } else if (destination.kind === 'firstChildOf') {
+    return forestWithSubtreeInsertedFirstInside(forest, addend, destination.parent);
+
+  } else {
+    // assert destination.kind must be one of the above with types
+    ((x: never) => {})(destination);
+    throw new Error("destination.kind must be one of the above");
+  }
 }
 
 function getSubtreeNodeCount(item: TreeItem): number {

@@ -26,15 +26,15 @@ import {
 } from '@dnd-kit/sortable';
 
 import {
-  buildTree,
   flattenTree,
   getProjection,
   getSubtreeNodeCountById,
   removeItem,
   removeChildrenOf,
   setProperty,
+  insertSubtreeAt,
 } from './utils/utilities';
-import type {FlattenedItem, SensorContext, TreeItems} from './utils/types';
+import type {FlattenedItem, SensorContext, TreeItem, TreeItems, TreePosition} from './utils/types';
 import {sortableTreeKeyboardCoordinates} from './utils/keyboardCoordinates';
 import {SortableTreeItem} from './TreeItem/TreeItem';
 import {CSS} from '@dnd-kit/utilities';
@@ -276,23 +276,12 @@ export function SortableTree({
   function handleDragEnd({active, over}: DragEndEvent) {
     resetState();
 
-    if (projected && over) {
-      const {depth, parentId} = projected;
-      const clonedItems: FlattenedItem[] = JSON.parse(
-        JSON.stringify(flattenTree(items))
-      );
-      const overIndex = clonedItems.findIndex(({id}) => id === over.id);
-      const activeIndex = clonedItems.findIndex(({id}) => id === active.id);
-      const activeTreeItem = clonedItems[activeIndex];
-
-      if (!activeIndex || !activeTreeItem) return;
-      clonedItems[activeIndex] = {...activeTreeItem, depth, parentId};
-
-      const sortedItems = arrayMove(clonedItems, activeIndex, overIndex);
-      const newItems = buildTree(sortedItems);
-
-      setItems(newItems);
+    const activeItem = flattenedItems.find(({id}) => id === active.id);
+    if (!projected || !activeItem) {
+      return;
     }
+
+    handleMove(activeItem, projected.destination);
   }
 
   function handleDragCancel() {
@@ -313,12 +302,15 @@ export function SortableTree({
   }
 
   function handleCollapse(id: UniqueIdentifier) {
-    setItems((items) =>
-      setProperty(items, id, item => ({
-        ...item,
-        collapsed: !item.collapsed
-      }))
-    );
+    setItems(items => setProperty(items, id, 'collapsed', c => !c));
+  }
+
+  function handleMove(activeItem: TreeItem, destination: TreePosition) {
+    setItems(items => insertSubtreeAt(
+      removeItem(items, activeItem.id),
+      activeItem,
+      destination
+    ));
   }
 
   function getMovementAnnouncement(
