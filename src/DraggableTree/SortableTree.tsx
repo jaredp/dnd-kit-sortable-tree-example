@@ -314,9 +314,10 @@ export function SortableTree({
 
   function handleCollapse(id: UniqueIdentifier) {
     setItems((items) =>
-      setProperty(items, id, 'collapsed', (value) => {
-        return !value;
-      })
+      setProperty(items, id, item => ({
+        ...item,
+        collapsed: !item.collapsed
+      }))
     );
   }
 
@@ -353,7 +354,7 @@ export function SortableTree({
 
     const previousItem = sortedItems[overIndex - 1];
     const activeItem = flattenedItems[activeIndex];
-    
+
     if (!activeItem) return;
     const activeItemName = getLabelStringFromItem(activeItem);
 

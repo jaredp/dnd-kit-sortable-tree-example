@@ -1,6 +1,7 @@
 import type {UniqueIdentifier} from '@dnd-kit/core';
 import {arrayMove} from '@dnd-kit/sortable';
 import sumBy from 'lodash/sumBy';
+import { Children } from 'react';
 
 import type {FlattenedItem, TreeItem, TreeItems} from './types';
 
@@ -61,19 +62,11 @@ export function getProjection(
 }
 
 function getMaxDepth(previousItem?: FlattenedItem) {
-  if (previousItem) {
-    return previousItem.depth + 1;
-  }
-
-  return 0;
+  return previousItem !== undefined ? previousItem.depth + 1 : 0;
 }
 
 function getMinDepth(nextItem?: FlattenedItem) {
-  if (nextItem) {
-    return nextItem.depth;
-  }
-
-  return 0;
+  return nextItem?.depth ?? 0;
 }
 
 function flatten(
@@ -138,42 +131,20 @@ export function findItemDeep(
   return undefined;
 }
 
-export function removeItem(items: TreeItems, id: UniqueIdentifier) {
-  const newItems = [];
-
-  for (const item of items) {
-    if (item.id === id) {
-      continue;
-    }
-
-    if (item.children.length) {
-      item.children = removeItem(item.children, id);
-    }
-
-    newItems.push(item);
-  }
-
-  return newItems;
+export function removeItem(items: TreeItems, id: UniqueIdentifier): TreeItems {
+  return items
+    .filter(item => item.id !== id)
+    .map(item => ({...item, children: removeItem(item.children, id)}));
 }
 
-export function setProperty<T extends keyof TreeItem>(
-  items: TreeItems,
+export function setProperty(
+  items: TreeItem[],
   id: UniqueIdentifier,
-  property: T,
-  setter: (value: TreeItem[T]) => TreeItem[T]
-) {
-  for (const item of items) {
-    if (item.id === id) {
-      item[property] = setter(item[property]);
-      continue;
-    }
-
-    if (item.children.length) {
-      item.children = setProperty(item.children, id, property, setter);
-    }
-  }
-
-  return [...items];
+  setter: (value: TreeItem) => TreeItem
+): TreeItem[] {
+  return items.map(item =>
+    item.id === id ? setter(item) : {...item, children: setProperty(item.children, id, setter)}
+  );
 }
 
 function getSubtreeNodeCount(item: TreeItem): number {
