@@ -46,28 +46,7 @@ export function getProjection(
     : predecessor.depth < depth ? { kind: 'firstChildOf', parent: predecessor }
     : { kind: 'after', sibling: predecessor };
   
-  const parentId = (() => {
-    if (depth === 0 || !previousItem) {
-      return null;
-    }
-
-    if (depth === previousItem.depth) {
-      return previousItem.parentId;
-    }
-
-    if (depth > previousItem.depth) {
-      return previousItem.id;
-    }
-
-    const newParent = newItems
-      .slice(0, overItemIndex)
-      .reverse()
-      .find((item) => item.depth === depth)?.parentId;
-
-    return newParent ?? null;
-  })();
-
-  return { depth, maxDepth, minDepth, destination, parentId };
+  return { depth, maxDepth, minDepth, destination };
 }
 
 function getMaxDepth(previousItem?: FlattenedItem) {
@@ -133,16 +112,17 @@ export function removeChildrenOf(
   items: FlattenedItem[],
   ids: UniqueIdentifier[]
 ) {
-  const excludeParentIds = [...ids];
+  const excludeParentIds = new Set(ids);
 
-  return items.filter((item) => {
-    if (item.parentId && excludeParentIds.includes(item.parentId)) {
-      if (item.children.length) {
-        excludeParentIds.push(item.id);
-      }
-      return false;
+  const filtered = [];
+
+  let skip_until_depth = null;
+  for (const item of items) {
+    if (skip_until_depth === null || item.depth <= skip_until_depth) {
+      filtered.push(item);
+      skip_until_depth = excludeParentIds.has(item.id) ? item.depth : null;
     }
+  }
 
-    return true;
-  });
+  return filtered;
 }

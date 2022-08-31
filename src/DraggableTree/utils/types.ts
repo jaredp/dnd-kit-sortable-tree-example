@@ -10,7 +10,6 @@ export interface TreeItem {
 export type TreeItems = TreeItem[];
 
 export interface FlattenedItem extends TreeItem {
-  parentId: UniqueIdentifier | null;
   depth: number;
 }
 
