@@ -72,6 +72,7 @@ interface Props {
   items: TreeItem[],
   getLabelStringForItem: (item: TreeItem) => string;
   getLabelForItem: (item: TreeItem) => React.ReactNode;
+  hasChildren: (item: TreeItem) => boolean;
   getSubtreeSize: (item: TreeItem) => number | undefined;
   handleRemove: (id: UniqueIdentifier) => void;
   handleCollapse: (id: UniqueIdentifier) => void;
@@ -86,6 +87,7 @@ export function SortableTree({
   items,
   getLabelStringForItem,
   getLabelForItem,
+  hasChildren,
   getSubtreeSize,
   handleRemove,
   handleCollapse,
@@ -102,7 +104,7 @@ export function SortableTree({
   const flattenedItems = useMemo(() => {
     const flattenedTree = flattenTree(items);
     const collapsedItems = flattenedTree
-      .filter(e => e.collapsed && e.children.length > 0)
+      .filter(e => e.collapsed)
       .map(e => e.id);
 
     return removeChildrenOf(
@@ -185,7 +187,7 @@ export function SortableTree({
       onDragCancel={handleDragCancel}
     >
       <SortableContext items={sortedIds} strategy={verticalListSortingStrategy}>
-        {flattenedItems.map(({id, item, children, collapsed, depth}) => (
+        {flattenedItems.map(({id, item, collapsed, depth}) => (
           <SortableTreeItem
             key={id}
             id={id}
@@ -193,9 +195,9 @@ export function SortableTree({
             depth={id === activeId && projected ? projected.depth : depth}
             indentationWidth={indentationWidth}
             indicator={indicator}
-            collapsed={Boolean(collapsed && children.length)}
+            collapsed={Boolean(collapsed && hasChildren(item))}
             onCollapse={
-              collapsible && children.length
+              collapsible && hasChildren(item)
                 ? () => handleCollapse(id)
                 : undefined
             }

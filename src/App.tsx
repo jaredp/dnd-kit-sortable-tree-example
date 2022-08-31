@@ -141,6 +141,7 @@ function App() {
             items={items}
             getLabelStringForItem={item => item.id.toString()}
             getLabelForItem={item => item.id}
+            hasChildren={item => item.children.length > 0}
             getSubtreeSize={getSubtreeSize}
             handleRemove={id => setItems(items => removeItem(items, id))}
             handleCollapse={id => setItems(items => setProperty(items, id, 'collapsed', c => !c))}
