@@ -285,6 +285,7 @@ export function SortableTree({
       const activeIndex = clonedItems.findIndex(({id}) => id === active.id);
       const activeTreeItem = clonedItems[activeIndex];
 
+      if (!activeIndex || !activeTreeItem) return;
       clonedItems[activeIndex] = {...activeTreeItem, depth, parentId};
 
       const sortedItems = arrayMove(clonedItems, activeIndex, overIndex);
@@ -351,7 +352,10 @@ export function SortableTree({
     const sortedItems = arrayMove(flattenedItems, activeIndex, overIndex);
 
     const previousItem = sortedItems[overIndex - 1];
-    const activeItemName = getLabelStringFromItem(flattenedItems[activeIndex]);
+    const activeItem = flattenedItems[activeIndex];
+    
+    if (!activeItem) return;
+    const activeItemName = getLabelStringFromItem(activeItem);
 
     const movedVerb = eventName === 'onDragEnd' ? 'dropped' : 'moved';
     const nestedVerb = eventName === 'onDragEnd' ? 'dropped' : 'nested';

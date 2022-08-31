@@ -108,7 +108,10 @@ export const sortableTreeKeyboardCoordinates: (
     let closestId = getFirstCollision(collisions, 'id');
 
     if (closestId === over?.id && collisions.length > 1) {
-      closestId = collisions[1].id;
+      const second_collision = collisions[1];
+      if (second_collision) {
+        closestId = second_collision.id;        
+      }
     }
 
     if (closestId && over?.id) {
