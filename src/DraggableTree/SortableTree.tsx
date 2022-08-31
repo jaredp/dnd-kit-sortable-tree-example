@@ -215,7 +215,7 @@ export function SortableTree<TreeItem>({
                 depth={activeItem.depth}
                 clone
                 childCount={getSubtreeSize(activeItem.item)}
-                label={activeId.toString()}
+                label={getLabelForItem(activeItem.item)}
                 indentationWidth={indentationWidth}
               />
             ) : null}
