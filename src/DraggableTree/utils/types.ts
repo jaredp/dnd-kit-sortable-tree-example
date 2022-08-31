@@ -12,7 +12,6 @@ export type TreeItems = TreeItem[];
 export interface FlattenedItem extends TreeItem {
   parentId: UniqueIdentifier | null;
   depth: number;
-  index: number;
 }
 
 export type SensorContext = MutableRefObject<{

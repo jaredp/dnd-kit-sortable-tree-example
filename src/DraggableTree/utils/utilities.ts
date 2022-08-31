@@ -86,7 +86,7 @@ function flatten(
   return items.reduce<FlattenedItem[]>((acc, item, index) => {
     return [
       ...acc,
-      {...item, parentId, depth, index},
+      {...item, parentId, depth},
       ...flatten(item.children, item.id, depth + 1),
     ];
   }, []);
