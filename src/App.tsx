@@ -96,7 +96,7 @@ export function forestWithSubtreeInsertedFirstInside(
 ): TreeItem[] {
   return mapForest(forest, (children, node) => {
     if (node?.id === parent?.id) {
-      return [addend, ...children];
+      return node?.collapsed ? [...children, addend] : [addend, ...children];
     }
     return children;
   });
@@ -108,6 +108,7 @@ export function insertSubtreeAt(forest: TreeItem[], addend: TreeItem, destinatio
     return forestWithSubtreeInsertedAfter(forest, addend, destination.sibling);
 
   } else if (destination.kind === 'firstChildOf') {
+
     return forestWithSubtreeInsertedFirstInside(forest, addend, destination.parent);
 
   } else {
