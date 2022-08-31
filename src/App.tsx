@@ -6,7 +6,7 @@ import { FlattenedItem, TreePosition } from "./DraggableTree/utils/types";
 import sumBy from 'lodash/sumBy';
 
 export interface TreeItem {
-  id: UniqueIdentifier;
+  id: string;
   children: TreeItem[];
   collapsed?: boolean;
 }
@@ -108,7 +108,7 @@ export function forestWithSubtreeInsertedFirstInside(
   });
 }
 
-export function insertSubtreeAt(forest: TreeItem[], addend: TreeItem, destination: TreePosition): TreeItem[] {
+export function insertSubtreeAt(forest: TreeItem[], addend: TreeItem, destination: TreePosition<TreeItem>): TreeItem[] {
   if (destination.kind === 'after') {
     return forestWithSubtreeInsertedAfter(forest, addend, destination.sibling);
 
@@ -129,17 +129,17 @@ export function getSubtreeSize(item: TreeItem): number {
 function flatten(
   items: TreeItem[],
   depth = 0
-): FlattenedItem[] {
-  return items.reduce<FlattenedItem[]>((acc, item) => {
+): FlattenedItem<TreeItem>[] {
+  return items.reduce<FlattenedItem<TreeItem>[]>((acc, item) => {
     return [
       ...acc,
-      {...item, item, depth},
+      {id: item.id, collapsed: item.collapsed, item, depth},
       ...flatten(item.children, depth + 1),
     ];
   }, []);
 }
 
-export function flattenTree(items: TreeItem[]): FlattenedItem[] {
+export function flattenTree(items: TreeItem[]): FlattenedItem<TreeItem>[] {
   return flatten(items);
 }
 
@@ -163,8 +163,9 @@ function App() {
           <SortableTree 
             collapsible indicator removable
             flattenedTree={flattenedTree}
-            getLabelStringForItem={item => item.id.toString()}
+            getLabelStringForItem={item => item.id}
             getLabelForItem={item => item.id}
+            getKeyForItem={item => item.id}
             hasChildren={item => item.children.length > 0}
             getSubtreeSize={getSubtreeSize}
             handleRemove={id => setItems(items => removeItem(items, id))}

@@ -1,24 +1,19 @@
 import type {MutableRefObject} from 'react';
 import type {UniqueIdentifier} from '@dnd-kit/core';
 
-export interface TreeItem {
-  id: UniqueIdentifier;
-  children: TreeItem[];
-  collapsed?: boolean;
-}
 
-export type TreePosition =
-    { kind: 'after', sibling: TreeItem } 
-  | { kind: 'firstChildOf', parent: TreeItem | null };
+export type TreePosition<T> =
+    { kind: 'after', sibling: T } 
+  | { kind: 'firstChildOf', parent: T | null };
 
-export interface FlattenedItem {
+export interface FlattenedItem<T> {
   depth: number;
-  item: TreeItem;
+  item: T;
   id: UniqueIdentifier;
   collapsed?: boolean;
 }
 
-export type SensorContext = MutableRefObject<{
-  items: FlattenedItem[];
+export type SensorContext<T> = MutableRefObject<{
+  items: FlattenedItem<T>[];
   offset: number;
 }>;

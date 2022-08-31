@@ -3,7 +3,7 @@ import {arrayMove} from '@dnd-kit/sortable';
 import clamp from 'lodash/clamp';
 import findLast from 'lodash/findLast'
 
-import type {FlattenedItem, TreeItem, TreePosition} from './types';
+import type {FlattenedItem, TreePosition} from './types';
 
 export const iOS = /iPad|iPhone|iPod/.test(navigator.platform);
 
@@ -11,8 +11,8 @@ function getDragDepth(offset: number, indentationWidth: number) {
   return Math.round(offset / indentationWidth);
 }
 
-export function getProjection(
-  items: FlattenedItem[],
+export function getProjection<T>(
+  items: FlattenedItem<T>[],
   activeId: UniqueIdentifier,
   overId: UniqueIdentifier,
   dragOffset: number,
@@ -41,7 +41,7 @@ export function getProjection(
     (item) => item.depth <= depth,
     overItemIndex - 1
   );
-  const destination: TreePosition =
+  const destination: TreePosition<T> =
     predecessor === undefined ? { kind: 'firstChildOf', parent: null }
     : predecessor.depth < depth ? { kind: 'firstChildOf', parent: predecessor.item }
     : { kind: 'after', sibling: predecessor.item };
@@ -49,16 +49,16 @@ export function getProjection(
   return { depth, maxDepth, minDepth, isNoOp, destination };
 }
 
-function getMaxDepth(previousItem?: FlattenedItem) {
+function getMaxDepth<T>(previousItem?: FlattenedItem<T>) {
   return previousItem === undefined ? 0 : previousItem.depth + 1;
 }
 
-function getMinDepth(nextItem?: FlattenedItem) {
+function getMinDepth<T>(nextItem?: FlattenedItem<T>) {
   return nextItem?.depth ?? 0;
 }
 
-export function removeChildrenOf(
-  items: FlattenedItem[],
+export function removeChildrenOf<T>(
+  items: FlattenedItem<T>[],
   ids: UniqueIdentifier[]
 ) {
   const excludeParentIds = new Set(ids);

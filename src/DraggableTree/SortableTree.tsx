@@ -28,7 +28,7 @@ import {
   getProjection,
   removeChildrenOf,
 } from './utils/utilities';
-import type {FlattenedItem, SensorContext, TreeItem, TreePosition} from './utils/types';
+import type {FlattenedItem, SensorContext, TreePosition} from './utils/types';
 import {sortableTreeKeyboardCoordinates} from './utils/keyboardCoordinates';
 import {SortableTreeItem} from './TreeItem/TreeItem';
 import {CSS} from '@dnd-kit/utilities';
@@ -63,22 +63,23 @@ const dropAnimationConfig: DropAnimation = {
   },
 };
 
-interface Props {
+interface Props<TreeItem> {
   collapsible?: boolean;
   indentationWidth?: number;
   indicator?: boolean;
   removable?: boolean;
-  flattenedTree: FlattenedItem[],
+  flattenedTree: FlattenedItem<TreeItem>[],
   getLabelStringForItem: (item: TreeItem) => string;
   getLabelForItem: (item: TreeItem) => React.ReactNode;
+  getKeyForItem: (item: TreeItem) => UniqueIdentifier;
   hasChildren: (item: TreeItem) => boolean;
   getSubtreeSize: (item: TreeItem) => number | undefined;
   handleRemove: (id: UniqueIdentifier) => void;
   handleCollapse: (id: UniqueIdentifier) => void;
-  handleMove: (activeItem: TreeItem, destination: TreePosition) => void;
+  handleMove: (activeItem: TreeItem, destination: TreePosition<TreeItem>) => void;
 }
 
-export function SortableTree({
+export function SortableTree<TreeItem>({
   collapsible,
   indicator = false,
   indentationWidth = 50,
@@ -86,12 +87,13 @@ export function SortableTree({
   flattenedTree,
   getLabelStringForItem,
   getLabelForItem,
+  getKeyForItem,
   hasChildren,
   getSubtreeSize,
   handleRemove,
   handleCollapse,
   handleMove,
-}: Props) {
+}: Props<TreeItem>) {
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [overId, setOverId] = useState<UniqueIdentifier | null>(null);
   const [offsetLeft, setOffsetLeft] = useState(0);
@@ -121,7 +123,7 @@ export function SortableTree({
           indentationWidth
         )
       : null;
-  const sensorContext: SensorContext = useRef({
+  const sensorContext: SensorContext<TreeItem> = useRef({
     items: flattenedItems,
     offset: offsetLeft,
   });
@@ -303,7 +305,7 @@ export function SortableTree({
 
     if (destination.kind === 'after') {
       const { sibling } = destination;
-      const previousSibling = flattenedItems.find(({id}) => id === sibling.id);
+      const previousSibling = flattenedItems.find(({id}) => id === getKeyForItem(sibling));
       if (!previousSibling) return;
       const previousSiblingName = getLabelStringForItem(previousSibling.item);
       return `${activeItemName} was ${movedVerb} after ${previousSiblingName}.`;
@@ -318,7 +320,7 @@ export function SortableTree({
         return `${activeItemName} was ${movedVerb} before ${nextItemName}.`;
       }
 
-      const parentItem = flattenedItems.find(({id}) => id === parent.id);
+      const parentItem = flattenedItems.find(({id}) => id === getKeyForItem(parent));
       if (!parentItem) return;
       const previousItemName = getLabelStringForItem(parentItem.item);
       return `${activeItemName} was ${nestedVerb} under ${previousItemName}.`;
