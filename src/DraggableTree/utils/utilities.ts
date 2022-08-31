@@ -43,8 +43,8 @@ export function getProjection(
   );
   const destination: TreePosition =
     predecessor === undefined ? { kind: 'firstChildOf', parent: null }
-    : predecessor.depth < depth ? { kind: 'firstChildOf', parent: predecessor }
-    : { kind: 'after', sibling: predecessor };
+    : predecessor.depth < depth ? { kind: 'firstChildOf', parent: predecessor.item }
+    : { kind: 'after', sibling: predecessor.item };
   
   return { depth, maxDepth, minDepth, isNoOp, destination };
 }
@@ -55,23 +55,6 @@ function getMaxDepth(previousItem?: FlattenedItem) {
 
 function getMinDepth(nextItem?: FlattenedItem) {
   return nextItem?.depth ?? 0;
-}
-
-function flatten(
-  items: TreeItem[],
-  depth = 0
-): FlattenedItem[] {
-  return items.reduce<FlattenedItem[]>((acc, item) => {
-    return [
-      ...acc,
-      {...item, item, depth},
-      ...flatten(item.children, depth + 1),
-    ];
-  }, []);
-}
-
-export function flattenTree(items: TreeItem[]): FlattenedItem[] {
-  return flatten(items);
 }
 
 export function removeChildrenOf(

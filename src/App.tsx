@@ -2,9 +2,14 @@ import { UniqueIdentifier } from "@dnd-kit/core";
 import React from "react";
 
 import { SortableTree } from "./DraggableTree/SortableTree";
-import { TreeItem, TreePosition } from "./DraggableTree/utils/types";
+import { FlattenedItem, TreePosition } from "./DraggableTree/utils/types";
 import sumBy from 'lodash/sumBy';
 
+export interface TreeItem {
+  id: UniqueIdentifier;
+  children: TreeItem[];
+  collapsed?: boolean;
+}
 
 const initialItems: TreeItem[] = [
   {
@@ -117,13 +122,32 @@ export function insertSubtreeAt(forest: TreeItem[], addend: TreeItem, destinatio
   }
 }
 
-
 export function getSubtreeSize(item: TreeItem): number {
   return sumBy(item.children, c => getSubtreeSize(c)) + 1;
 }
 
+function flatten(
+  items: TreeItem[],
+  depth = 0
+): FlattenedItem[] {
+  return items.reduce<FlattenedItem[]>((acc, item) => {
+    return [
+      ...acc,
+      {...item, item, depth},
+      ...flatten(item.children, depth + 1),
+    ];
+  }, []);
+}
+
+export function flattenTree(items: TreeItem[]): FlattenedItem[] {
+  return flatten(items);
+}
+
 function App() {
   const [items, setItems] = React.useState(() => initialItems);
+  const flattenedTree = React.useMemo(() => {
+    return flattenTree(items);
+  }, [items]);
 
   return (
     <main style={{
@@ -138,7 +162,7 @@ function App() {
         }}>
           <SortableTree 
             collapsible indicator removable
-            items={items}
+            flattenedTree={flattenedTree}
             getLabelStringForItem={item => item.id.toString()}
             getLabelForItem={item => item.id}
             hasChildren={item => item.children.length > 0}

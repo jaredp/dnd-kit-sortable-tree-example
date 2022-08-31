@@ -25,11 +25,10 @@ import {
 } from '@dnd-kit/sortable';
 
 import {
-  flattenTree,
   getProjection,
   removeChildrenOf,
 } from './utils/utilities';
-import type {SensorContext, TreeItem, TreePosition} from './utils/types';
+import type {FlattenedItem, SensorContext, TreeItem, TreePosition} from './utils/types';
 import {sortableTreeKeyboardCoordinates} from './utils/keyboardCoordinates';
 import {SortableTreeItem} from './TreeItem/TreeItem';
 import {CSS} from '@dnd-kit/utilities';
@@ -69,7 +68,7 @@ interface Props {
   indentationWidth?: number;
   indicator?: boolean;
   removable?: boolean;
-  items: TreeItem[],
+  flattenedTree: FlattenedItem[],
   getLabelStringForItem: (item: TreeItem) => string;
   getLabelForItem: (item: TreeItem) => React.ReactNode;
   hasChildren: (item: TreeItem) => boolean;
@@ -84,7 +83,7 @@ export function SortableTree({
   indicator = false,
   indentationWidth = 50,
   removable,
-  items,
+  flattenedTree,
   getLabelStringForItem,
   getLabelForItem,
   hasChildren,
@@ -102,7 +101,6 @@ export function SortableTree({
   } | null>(null);
 
   const flattenedItems = useMemo(() => {
-    const flattenedTree = flattenTree(items);
     const collapsedItems = flattenedTree
       .filter(e => e.collapsed)
       .map(e => e.id);
@@ -111,7 +109,7 @@ export function SortableTree({
       flattenedTree,
       activeId ? [activeId, ...collapsedItems] : collapsedItems
     );
-  }, [activeId, items]);
+  }, [activeId, flattenedTree]);
 
   const projected =
     activeId && overId
@@ -259,7 +257,7 @@ export function SortableTree({
     const activeItem = flattenedItems.find(({id}) => id === active.id);
     if (!activeItem) return;
 
-    handleMove(activeItem, projected.destination);
+    handleMove(activeItem.item, projected.destination);
   }
 
   function handleDragCancel() {

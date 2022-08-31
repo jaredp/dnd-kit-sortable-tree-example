@@ -11,9 +11,11 @@ export type TreePosition =
     { kind: 'after', sibling: TreeItem } 
   | { kind: 'firstChildOf', parent: TreeItem | null };
 
-export interface FlattenedItem extends TreeItem {
+export interface FlattenedItem {
   depth: number;
   item: TreeItem;
+  id: UniqueIdentifier;
+  collapsed?: boolean;
 }
 
 export type SensorContext = MutableRefObject<{
