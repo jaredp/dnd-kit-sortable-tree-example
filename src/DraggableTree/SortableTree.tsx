@@ -252,10 +252,11 @@ export function SortableTree({
   function handleDragEnd({active, over}: DragEndEvent) {
     resetState();
 
+    if (!projected) return;
+    if (projected.isNoOp) return;
+
     const activeItem = flattenedItems.find(({id}) => id === active.id);
-    if (!projected || !activeItem) {
-      return;
-    }
+    if (!activeItem) return;
 
     handleMove(activeItem, projected.destination);
   }

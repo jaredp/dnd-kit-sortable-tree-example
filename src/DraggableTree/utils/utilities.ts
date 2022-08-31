@@ -22,18 +22,19 @@ export function getProjection(
   const overItemIndex = items.findIndex(({id}) => id === overId);
   const activeItemIndex = items.findIndex(({id}) => id === activeId);
 
-  const activeItem = items[activeItemIndex];
-
   const newItems = arrayMove(items, activeItemIndex, overItemIndex);
   const previousItem = newItems[overItemIndex - 1];
   const nextItem = newItems[overItemIndex + 1];
 
+  const activeItemDepth = items[activeItemIndex]?.depth ?? 0;
   const dragDepth = getDragDepth(dragOffset, indentationWidth);
-  const projectedDepth = (activeItem?.depth ?? 0) + dragDepth;
+  const projectedDepth = activeItemDepth + dragDepth;
   
   const maxDepth = getMaxDepth(previousItem);
   const minDepth = getMinDepth(nextItem);
   const depth = clamp(projectedDepth, minDepth, maxDepth);
+
+  const isNoOp = overId === activeId && depth === activeItemDepth;
 
   // either prevSibling or parent
   const predecessor = overItemIndex === 0 ? undefined : findLast(
@@ -46,7 +47,7 @@ export function getProjection(
     : predecessor.depth < depth ? { kind: 'firstChildOf', parent: predecessor }
     : { kind: 'after', sibling: predecessor };
   
-  return { depth, maxDepth, minDepth, destination };
+  return { depth, maxDepth, minDepth, isNoOp, destination };
 }
 
 function getMaxDepth(previousItem?: FlattenedItem) {
@@ -59,14 +60,13 @@ function getMinDepth(nextItem?: FlattenedItem) {
 
 function flatten(
   items: TreeItems,
-  parentId: UniqueIdentifier | null = null,
   depth = 0
 ): FlattenedItem[] {
   return items.reduce<FlattenedItem[]>((acc, item, index) => {
     return [
       ...acc,
-      {...item, parentId, depth},
-      ...flatten(item.children, item.id, depth + 1),
+      {...item, depth},
+      ...flatten(item.children, depth + 1),
     ];
   }, []);
 }
